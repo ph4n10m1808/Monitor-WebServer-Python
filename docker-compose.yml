@@ -1,0 +1,28 @@
+---
+# docker-compose.yml
+version: '3.9'
+
+
+services:
+    dashboard:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: log_dashboard
+      ports:
+      - "5000:5000"
+      volumes:
+      - ./data:/app/data
+      - ./logs.json:/app/logs.json
+      depends_on:
+      - collector
+    collector:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: log_collector
+volumes:
+  - /var/log/apache2:/logs:ro
+  # - ./logs.json:/collector/logs.json
+environment:
+  - LOG_PATH=/logs/access.log
