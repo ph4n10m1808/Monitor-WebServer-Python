@@ -1,30 +1,25 @@
-# Dockerfile với multi-stage build
-FROM python:3.11-slim AS base
+FROM ubuntu:22.04
 
-WORKDIR /app
+ENV DEBIAN_FRONTEND=noninteractive TZ=Asia/Ho_Chi_Minh
 
-# Copy requirements và install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt update && \
+    apt install -y \
+        tzdata apache2 php libapache2-mod-php php-mysql curl wget && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    a2enmod rewrite && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+    
+# Copy web source code
+COPY ./src /var/www/html
 
-# Dashboard service
-FROM base AS dashboard
-COPY src/app.py .
-COPY src/templates ./templates
-COPY src/static ./static
-EXPOSE 5000
-ENV MONGO_HOST=mongodb
-ENV MONGO_PORT=27017
-ENV MONGO_DB=logdb
-ENV MONGO_COLLECTION=logs
-CMD ["python", "app.py"]
+# Set proper permissions
+RUN chown -R root:www-data /var/www/html && \
+    chmod 750 /var/www/html && \
+    find /var/www/html -type f -exec chmod 640 {} \; && \
+    find /var/www/html -type d -exec chmod 750 {} \;
 
-# Collector service
-FROM base AS collector
-COPY src/collector.py .
-ENV MONGO_HOST=mongodb
-ENV MONGO_PORT=27017
-ENV MONGO_DB=logdb
-ENV MONGO_COLLECTION=logs
-ENV LOG_PATH=/logs/access.log
-CMD ["python", "collector.py"]
+WORKDIR /var/www/html
+
+CMD ["apachectl", "-D", "FOREGROUND"]

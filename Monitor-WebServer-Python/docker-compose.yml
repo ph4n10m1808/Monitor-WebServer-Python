@@ -1,0 +1,68 @@
+---
+# docker-compose.yml
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: log_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=logdb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dashboard
+    container_name: log_dashboard
+    ports:
+      - "5050:5000"
+    volumes:
+      - ../logs:/app/logs # Mount folder logs để truy cập access.log
+      - ./data:/app/data
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=logdb
+      - MONGO_COLLECTION=logs
+      - LOG_PATH=/app/logs/access.log # Đường dẫn trong container
+      - POSITION_FILE=/app/data/log_position.json
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: collector
+    container_name: log_collector
+    volumes:
+      - ../logs:/app/logs # Mount folder logs để truy cập access.log
+      - ./data:/app/data
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=logdb
+      - MONGO_COLLECTION=logs
+      - LOG_PATH=/app/logs/access.log # Đường dẫn trong container
+      - POSITION_FILE=/app/data/log_position.json
+      - READ_INTERVAL=30
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:
