@@ -2,627 +2,190 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Log Dashboard - Real-time Monitoring</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 20px;
-        color: #333;
-      }
-      
-      .container {
-        max-width: 1400px;
-        margin: 0 auto;
-      }
-      
-      .header {
-        background: white;
-        padding: 20px 30px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      
-      .header h1 {
-        color: #667eea;
-        font-size: 28px;
-      }
-      
-      .status-bar {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-      }
-      
-      .status-indicator {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 14px;
-      }
-      
-      .status-live {
-        background: #10b981;
-        color: white;
-      }
-      
-      .status-idle {
-        background: #e5e7eb;
-        color: #6b7280;
-      }
-      
-      .total-entries {
-        background: #667eea;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: bold;
-      }
-      
-      .dashboard {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 20px;
-        margin-bottom: 20px;
-      }
-      
-      .card {
-        background: white;
-        padding: 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      }
-      
-      .card h2 {
-        color: #667eea;
-        margin-bottom: 20px;
-        font-size: 20px;
-        border-bottom: 2px solid #f3f4f6;
-        padding-bottom: 10px;
-      }
-      
-      .chart-container {
-        position: relative;
-        height: 300px;
-      }
-      
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-        margin-bottom: 20px;
-      }
-      
-      @media (max-width: 1200px) {
-        .stats-grid {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-      
-      .stats-list {
-        list-style: none;
-      }
-      
-      .stats-list li {
-        padding: 12px;
-        margin-bottom: 8px;
-        background: #f9fafb;
-        border-radius: 6px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: background 0.2s;
-      }
-      
-      .stats-list li:hover {
-        background: #f3f4f6;
-      }
-      
-      .stats-list .ip, .stats-list .path {
-        font-family: 'Courier New', monospace;
-        color: #667eea;
-        font-weight: 500;
-      }
-      
-      .stats-list .status-code {
-        font-family: 'Courier New', monospace;
-        font-weight: 600;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 13px;
-      }
-      
-      .stats-list .status-code.status-2xx {
-        background: #d1fae5;
-        color: #065f46;
-      }
-      
-      .stats-list .status-code.status-3xx {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      
-      .stats-list .status-code.status-4xx {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-      
-      .stats-list .status-code.status-5xx {
-        background: #fce7f3;
-        color: #9f1239;
-      }
-      
-      .stats-list .count {
-        background: #667eea;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-weight: bold;
-        font-size: 14px;
-      }
-      
-      /* Log entries section */
-      .logs-section {
-        background: white;
-        padding: 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-      }
-      
-      .logs-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-        gap: 15px;
-      }
-      
-      .logs-controls {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-      }
-      
-      /* Search form */
-      .search-form {
-        background: #f9fafb;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        border: 1px solid #e5e7eb;
-      }
-      
-      .search-form h3 {
-        color: #667eea;
-        margin-bottom: 15px;
-        font-size: 16px;
-      }
-      
-      .search-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 15px;
-      }
-      
-      .search-field {
-        display: flex;
-        flex-direction: column;
-      }
-      
-      .search-field label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #6b7280;
-        margin-bottom: 5px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      
-      .search-field input,
-      .search-field select {
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 14px;
-        transition: border-color 0.2s;
-      }
-      
-      .search-field input:focus,
-      .search-field select:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-      
-      .search-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-      }
-      
-      .btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: all 0.2s;
-        font-size: 14px;
-      }
-      
-      .btn-primary {
-        background: #667eea;
-        color: white;
-      }
-      
-      .btn-primary:hover {
-        background: #5568d3;
-      }
-      
-      .btn-secondary {
-        background: #e5e7eb;
-        color: #374151;
-      }
-      
-      .btn-secondary:hover {
-        background: #d1d5db;
-      }
-      
-      .btn-danger {
-        background: #ef4444;
-        color: white;
-      }
-      
-      .btn-danger:hover {
-        background: #dc2626;
-      }
-      
-      .active-filters {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      
-      .filter-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 4px 10px;
-        background: #667eea;
-        color: white;
-        border-radius: 12px;
-        font-size: 12px;
-      }
-      
-      .filter-badge .remove {
-        cursor: pointer;
-        font-weight: bold;
-      }
-      
-      .logs-table {
-        width: 100%;
-        border-collapse: collapse;
-        overflow-x: auto;
-        display: block;
-        max-height: 600px;
-        overflow-y: auto;
-      }
-      
-      .logs-table thead {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 10;
-      }
-      
-      .logs-table th {
-        padding: 12px;
-        text-align: left;
-        font-weight: 600;
-        color: #667eea;
-        border-bottom: 2px solid #e5e7eb;
-        background: white;
-      }
-      
-      .logs-table td {
-        padding: 12px;
-        border-bottom: 1px solid #f3f4f6;
-        font-size: 14px;
-      }
-      
-      .logs-table tbody tr {
-        transition: background 0.2s;
-      }
-      
-      .logs-table tbody tr:hover {
-        background: #f9fafb;
-      }
-      
-      .log-time {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        color: #6b7280;
-      }
-      
-      .log-ip {
-        font-family: 'Courier New', monospace;
-        color: #667eea;
-        font-weight: 500;
-      }
-      
-      .log-method {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: bold;
-        text-transform: uppercase;
-      }
-      
-      .method-get {
-        background: #dbeafe;
-        color: #1e40af;
-      }
-      
-      .method-post {
-        background: #d1fae5;
-        color: #065f46;
-      }
-      
-      .method-put {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      
-      .method-delete {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-      
-      .log-status {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: bold;
-      }
-      
-      .status-2xx {
-        background: #d1fae5;
-        color: #065f46;
-      }
-      
-      .status-3xx {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      
-      .status-4xx {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-      
-      .status-5xx {
-        background: #fce7f3;
-        color: #9f1239;
-      }
-      
-      .log-path {
-        font-family: 'Courier New', monospace;
-        color: #374151;
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      
-      .pagination {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-        margin-top: 20px;
-      }
-      
-      .pagination-info {
-        color: #6b7280;
-        font-size: 14px;
-      }
-      
-      .update-status {
-        text-align: center;
-        color: rgba(255,255,255,0.9);
-        margin-bottom: 20px;
-        font-size: 14px;
-      }
-      
-      @media (max-width: 768px) {
-        .dashboard {
-          grid-template-columns: 1fr;
-        }
-        
-        .stats-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .stats-grid .card {
-          min-height: auto;
-        }
-        
-        .header {
-          flex-direction: column;
-          gap: 15px;
-        }
-        
-        .logs-table {
-          font-size: 12px;
-        }
-        
-        .logs-table th,
-        .logs-table td {
-          padding: 8px;
-        }
-        
-        .search-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="../static/css/style.css" />
+    <script src="../static/js/dashboard.js"></script>
   </head>
   <body>
     <div class="container">
       <div class="header">
         <h1>🌐 Web Server Log Dashboard</h1>
         <div class="status-bar">
-          <span id="statusIndicator" class="status-indicator status-idle">⚪ Idle</span>
-          <span class="total-entries">Total: <span id="totalEntries">0</span></span>
+          <span id="statusIndicator" class="status-indicator status-idle"
+            >⚪ Idle</span
+          >
+          <span class="total-entries"
+            >Total: <span id="totalEntries">0</span></span
+          >
         </div>
       </div>
-      
-      
+
       <div class="update-status">
         <span id="updateStatus">Initializing...</span>
       </div>
-            <!-- Log Entries Section -->
-            <div class="logs-section">
-              <div class="logs-header">
-                <h2>📋 Log Entries</h2>
-                <div class="logs-controls">
-                  <button class="btn btn-primary" onclick="loadLogs()">🔄 Refresh</button>
-                  <button class="btn btn-secondary" onclick="toggleAutoRefresh()">
-                    <span id="autoRefreshText">⏸️ Pause Auto-refresh</span>
-                  </button>
-                </div>
+      <!-- Log Entries Section -->
+      <div class="logs-section">
+        <div class="logs-header">
+          <h2>📋 Log Entries</h2>
+          <div class="logs-controls">
+            <button class="btn btn-primary" onclick="loadLogs()">
+              🔄 Refresh
+            </button>
+            <button class="btn btn-secondary" onclick="toggleAutoRefresh()">
+              <span id="autoRefreshText">⏸️ Pause Auto-refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="search-form">
+          <h3>🔍 Search Filters</h3>
+          <form id="searchForm" onsubmit="handleSearch(event)">
+            <div class="search-grid">
+              <div class="search-field">
+                <label for="searchIp">IP Address</label>
+                <input
+                  type="text"
+                  id="searchIp"
+                  name="ip"
+                  placeholder="e.g. 192.168.1.1"
+                />
               </div>
-              
-              <!-- Search Form -->
-              <div class="search-form">
-                <h3>🔍 Search Filters</h3>
-                <form id="searchForm" onsubmit="handleSearch(event)">
-                  <div class="search-grid">
-                    <div class="search-field">
-                      <label for="searchIp">IP Address</label>
-                      <input type="text" id="searchIp" name="ip" placeholder="e.g. 192.168.1.1" />
-                    </div>
-                    
-                    <div class="search-field">
-                      <label for="searchPath">Request Path</label>
-                      <input type="text" id="searchPath" name="path" placeholder="e.g. /api/users" />
-                    </div>
-                    
-                    <div class="search-field">
-                      <label for="searchMethod">Method</label>
-                      <select id="searchMethod" name="method">
-                        <option value="">All Methods</option>
-                        <option value="GET">GET</option>
-                        <option value="POST">POST</option>
-                        <option value="PUT">PUT</option>
-                        <option value="DELETE">DELETE</option>
-                        <option value="PATCH">PATCH</option>
-                        <option value="HEAD">HEAD</option>
-                        <option value="OPTIONS">OPTIONS</option>
-                      </select>
-                    </div>
-                    
-                    <div class="search-field">
-                      <label for="searchSizeMin">Size Min (bytes)</label>
-                      <input type="number" id="searchSizeMin" name="size_min" placeholder="0" min="0" />
-                    </div>
-                    
-                    <div class="search-field">
-                      <label for="searchSizeMax">Size Max (bytes)</label>
-                      <input type="number" id="searchSizeMax" name="size_max" placeholder="1000000" min="0" />
-                    </div>
-                  </div>
-                  
-                  <div class="search-actions">
-                    <button type="submit" class="btn btn-primary">🔍 Search</button>
-                    <button type="button" class="btn btn-danger" onclick="clearSearch()">🗑️ Clear</button>
-                  </div>
-                </form>
-                
-                <div id="activeFilters" class="active-filters"></div>
+
+              <div class="search-field">
+                <label for="searchPath">Request Path</label>
+                <input
+                  type="text"
+                  id="searchPath"
+                  name="path"
+                  placeholder="e.g. /api/users"
+                />
               </div>
-              
-              <div id="logsContainer">
-                <table class="logs-table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>IP</th>
-                      <th>Method</th>
-                      <th>Path</th>
-                      <th>Status</th>
-                      <th>Size</th>
-                      <th>User Agent</th>
-                    </tr>
-                  </thead>
-                  <tbody id="logsTableBody">
-                    <tr>
-                      <td colspan="7" style="text-align: center; padding: 20px;">
-                        Loading logs...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+
+              <div class="search-field">
+                <label for="searchMethod">Method</label>
+                <select id="searchMethod" name="method">
+                  <option value="">All Methods</option>
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="PATCH">PATCH</option>
+                  <option value="HEAD">HEAD</option>
+                  <option value="OPTIONS">OPTIONS</option>
+                </select>
               </div>
-              
-              <div class="pagination">
-                <button class="btn btn-secondary" id="prevBtn" onclick="changePage(-1)">← Previous</button>
-                <span class="pagination-info" id="pageInfo">Page 1 of 1</span>
-                <button class="btn btn-secondary" id="nextBtn" onclick="changePage(1)">Next →</button>
+
+              <div class="search-field">
+                <label for="searchSizeMin">Size Min (bytes)</label>
+                <input
+                  type="number"
+                  id="searchSizeMin"
+                  name="size_min"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+
+              <div class="search-field">
+                <label for="searchSizeMax">Size Max (bytes)</label>
+                <input
+                  type="number"
+                  id="searchSizeMax"
+                  name="size_max"
+                  placeholder="1000000"
+                  min="0"
+                />
               </div>
             </div>
-            
-          
+
+            <div class="search-actions">
+              <button type="submit" class="btn btn-primary">🔍 Search</button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                onclick="clearSearch()"
+              >
+                🗑️ Clear
+              </button>
+            </div>
+          </form>
+
+          <div id="activeFilters" class="active-filters"></div>
+        </div>
+
+        <div id="logsContainer">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>IP</th>
+                <th>Method</th>
+                <th>Path</th>
+                <th>Status</th>
+                <th>Size</th>
+                <th>User Agent</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 20px">
+                  Loading logs...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <button
+            class="btn btn-secondary"
+            id="prevBtn"
+            onclick="changePage(-1)"
+          >
+            ← Previous
+          </button>
+          <span class="pagination-info" id="pageInfo">Page 1 of 1</span>
+          <button
+            class="btn btn-secondary"
+            id="nextBtn"
+            onclick="changePage(1)"
+          >
+            Next →
+          </button>
+        </div>
+      </div>
 
       <div class="dashboard">
         <div class="card">
           <h2>📈 Requests Per Minute (RPM)</h2>
-          <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">Biểu đồ đường hiển thị số lượng request mỗi phút</p>
+          <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px">
+            Biểu đồ đường hiển thị số lượng request mỗi phút
+          </p>
           <div class="chart-container">
             <canvas id="rpmChart"></canvas>
           </div>
         </div>
       </div>
-      
+
       <div class="stats-grid">
         <div class="card">
           <h2>🔝 Top IPs</h2>
           <ul id="topIps" class="stats-list"></ul>
         </div>
-        
+
         <div class="card">
           <h2>🛤️ Top Paths</h2>
           <ul id="topPaths" class="stats-list"></ul>
         </div>
-        
+
         <div class="card">
           <h2>📊 Status Codes</h2>
           <ul id="topStatusCodes" class="stats-list"></ul>
         </div>
       </div>
-      
-
     </div>
-
-    <script src="/static/dashboard.js"></script>
   </body>
 </html>
