@@ -235,6 +235,16 @@ def build_search_query():
     if ip:
         query['ip'] = {'$regex': ip, '$options': 'i'}
     
+    # Search by Ident (regex for partial match)
+    ident = request.args.get('ident', '').strip()
+    if ident:
+        query['ident'] = {'$regex': ident, '$options': 'i'}
+    
+    # Search by User (regex for partial match)
+    user = request.args.get('user', '').strip()
+    if user:
+        query['user'] = {'$regex': user, '$options': 'i'}
+    
     # Search by Path/Request (regex for partial match)
     path = request.args.get('path', '').strip()
     if path:
@@ -244,6 +254,14 @@ def build_search_query():
     method = request.args.get('method', '').strip()
     if method:
         query['method'] = {'$regex': f'^{re.escape(method)}$', '$options': 'i'}
+    
+    # Search by Status Code (exact match or range)
+    status = request.args.get('status', '').strip()
+    if status:
+        try:
+            query['status'] = int(status)
+        except ValueError:
+            pass
     
     # Search by Size (range)
     size_min = request.args.get('size_min', '').strip()
@@ -262,6 +280,16 @@ def build_search_query():
                 pass
         if size_query:
             query['size'] = size_query
+    
+    # Search by Referer (regex for partial match)
+    referer = request.args.get('referer', '').strip()
+    if referer:
+        query['referer'] = {'$regex': referer, '$options': 'i'}
+    
+    # Search by User Agent (regex for partial match)
+    agent = request.args.get('agent', '').strip()
+    if agent:
+        query['agent'] = {'$regex': agent, '$options': 'i'}
     
     return query
 
@@ -299,10 +327,15 @@ def api_logs():
         'pages': (total + limit - 1) // limit if total > 0 else 0,
         'filters': {
             'ip': request.args.get('ip', ''),
+            'ident': request.args.get('ident', ''),
+            'user': request.args.get('user', ''),
             'path': request.args.get('path', ''),
             'method': request.args.get('method', ''),
+            'status': request.args.get('status', ''),
             'size_min': request.args.get('size_min', ''),
-            'size_max': request.args.get('size_max', '')
+            'size_max': request.args.get('size_max', ''),
+            'referer': request.args.get('referer', ''),
+            'agent': request.args.get('agent', '')
         }
     })
 

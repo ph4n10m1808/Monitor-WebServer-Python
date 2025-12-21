@@ -60,10 +60,15 @@ async function fetchLogs(page = 1, limit = 50, filters = {}) {
   
   // Add filters to params
   if (filters.ip) params.append('ip', filters.ip);
-  if (filters.path) params.append('path', filters.path);
+  if (filters.ident) params.append('ident', filters.ident);
+  if (filters.user) params.append('user', filters.user);
   if (filters.method) params.append('method', filters.method);
+  if (filters.path) params.append('path', filters.path);
+  if (filters.status) params.append('status', filters.status);
   if (filters.size_min) params.append('size_min', filters.size_min);
   if (filters.size_max) params.append('size_max', filters.size_max);
+  if (filters.referer) params.append('referer', filters.referer);
+  if (filters.agent) params.append('agent', filters.agent);
   
   const url = `/api/logs?${params.toString()}`;
   const r = await fetch(url);
@@ -105,8 +110,8 @@ function renderLogs(logsData) {
   if (!logsData.logs || logsData.logs.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 20px;">
-          No log entries found
+        <td colspan="10" class="loading-cell">
+          <span>No log entries found</span>
         </td>
       </tr>
     `;
@@ -121,6 +126,8 @@ function renderLogs(logsData) {
       <tr>
         <td class="log-time">${formatTime(log.time)}</td>
         <td class="log-ip">${log.ip || '-'}</td>
+        <td class="log-ident">${log.ident || '-'}</td>
+        <td class="log-user">${log.user || '-'}</td>
         <td>
           <span class="log-method ${methodClass}">${log.method || '-'}</span>
         </td>
@@ -129,10 +136,8 @@ function renderLogs(logsData) {
           <span class="log-status ${statusClass}">${log.status || '-'}</span>
         </td>
         <td>${formatBytes(log.size)}</td>
-        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" 
-            title="${log.agent || '-'}">
-          ${log.agent || '-'}
-        </td>
+        <td class="log-referer" title="${log.referer || '-'}">${log.referer || '-'}</td>
+        <td class="log-agent" title="${log.agent || '-'}">${log.agent || '-'}</td>
       </tr>
     `;
   }).join('');
@@ -157,11 +162,20 @@ function updateActiveFilters(filters) {
   if (filters.ip) {
     container.innerHTML += `<span class="filter-badge">IP: ${filters.ip} <span class="remove" onclick="removeFilter('ip')">×</span></span>`;
   }
-  if (filters.path) {
-    container.innerHTML += `<span class="filter-badge">Path: ${filters.path} <span class="remove" onclick="removeFilter('path')">×</span></span>`;
+  if (filters.ident) {
+    container.innerHTML += `<span class="filter-badge">Ident: ${filters.ident} <span class="remove" onclick="removeFilter('ident')">×</span></span>`;
+  }
+  if (filters.user) {
+    container.innerHTML += `<span class="filter-badge">User: ${filters.user} <span class="remove" onclick="removeFilter('user')">×</span></span>`;
   }
   if (filters.method) {
     container.innerHTML += `<span class="filter-badge">Method: ${filters.method} <span class="remove" onclick="removeFilter('method')">×</span></span>`;
+  }
+  if (filters.path) {
+    container.innerHTML += `<span class="filter-badge">Path: ${filters.path} <span class="remove" onclick="removeFilter('path')">×</span></span>`;
+  }
+  if (filters.status) {
+    container.innerHTML += `<span class="filter-badge">Status: ${filters.status} <span class="remove" onclick="removeFilter('status')">×</span></span>`;
   }
   if (filters.size_min || filters.size_max) {
     const sizeText = filters.size_min && filters.size_max 
@@ -170,6 +184,12 @@ function updateActiveFilters(filters) {
         ? `≥ ${filters.size_min}`
         : `≤ ${filters.size_max}`;
     container.innerHTML += `<span class="filter-badge">Size: ${sizeText} <span class="remove" onclick="removeFilter('size')">×</span></span>`;
+  }
+  if (filters.referer) {
+    container.innerHTML += `<span class="filter-badge">Referer: ${filters.referer} <span class="remove" onclick="removeFilter('referer')">×</span></span>`;
+  }
+  if (filters.agent) {
+    container.innerHTML += `<span class="filter-badge">Agent: ${filters.agent} <span class="remove" onclick="removeFilter('agent')">×</span></span>`;
   }
 }
 
@@ -214,10 +234,15 @@ function handleSearch(event) {
   const formData = new FormData(event.target);
   const filters = {
     ip: formData.get('ip')?.trim() || '',
-    path: formData.get('path')?.trim() || '',
+    ident: formData.get('ident')?.trim() || '',
+    user: formData.get('user')?.trim() || '',
     method: formData.get('method')?.trim() || '',
+    path: formData.get('path')?.trim() || '',
+    status: formData.get('status')?.trim() || '',
     size_min: formData.get('size_min')?.trim() || '',
-    size_max: formData.get('size_max')?.trim() || ''
+    size_max: formData.get('size_max')?.trim() || '',
+    referer: formData.get('referer')?.trim() || '',
+    agent: formData.get('agent')?.trim() || ''
   };
   
   // Remove empty filters
@@ -257,8 +282,8 @@ async function loadLogs(page = null, limit = null, filters = null) {
     if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 20px; color: #ef4444;">
-            Error loading logs: ${error.message}
+          <td colspan="7" class="loading-cell" style="color: var(--danger);">
+            <span>Error loading logs: ${error.message}</span>
           </td>
         </tr>
       `;
@@ -420,8 +445,11 @@ function renderRPM(labels, data) {
 function updateStatusIndicator(hasNewData) {
   const indicator = document.getElementById('statusIndicator');
   if (indicator) {
-    indicator.textContent = hasNewData ? '🟢 Live' : '⚪ Idle';
-    indicator.className = hasNewData ? 'status-live' : 'status-idle';
+    const statusText = indicator.querySelector('.status-text');
+    if (statusText) {
+      statusText.textContent = hasNewData ? 'Live' : 'Idle';
+    }
+    indicator.className = hasNewData ? 'status-badge status-live' : 'status-badge status-idle';
   }
 }
 
@@ -653,6 +681,38 @@ function waitForChartJS(callback, maxAttempts = 50) {
   }, 100);
 }
 
+// Tab Navigation Functions
+function switchTab(tabName) {
+  // Remove active class from all tabs and contents
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  // Add active class to selected tab and content
+  const selectedBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  const selectedContent = document.getElementById(`${tabName}Tab`);
+  
+  if (selectedBtn) {
+    selectedBtn.classList.add('active');
+  }
+  if (selectedContent) {
+    selectedContent.classList.add('active');
+  }
+  
+  // If switching to dashboard, ensure charts are rendered
+  if (tabName === 'dashboard' && typeof Chart !== 'undefined') {
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      if (window.rpmChart) {
+        window.rpmChart.resize();
+      }
+    }, 100);
+  }
+}
+
 // Initial load
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('DOM Content Loaded');
@@ -662,6 +722,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Check for timestamp in URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const timestampParam = urlParams.get('since');
+    const tabParam = urlParams.get('tab');
+    
+    // Set initial tab
+    if (tabParam === 'search') {
+      switchTab('search');
+    } else {
+      switchTab('dashboard');
+    }
     
     // Sync logs from file when page loads
     await syncLogs();
