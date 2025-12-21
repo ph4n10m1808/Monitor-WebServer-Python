@@ -15,7 +15,7 @@ MONGO_COLLECTION = os.getenv('MONGO_COLLECTION', 'logs')
 
 # Đường dẫn đến access.log trong folder src
 # Lấy đường dẫn tuyệt đối của thư mục chứa collector.py (src/)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = '/app/logs'
 LOG_PATH = os.getenv('LOG_PATH', os.path.join(BASE_DIR, 'access.log'))
 READ_INTERVAL = int(os.getenv('READ_INTERVAL', '30'))  # 30 seconds
 
