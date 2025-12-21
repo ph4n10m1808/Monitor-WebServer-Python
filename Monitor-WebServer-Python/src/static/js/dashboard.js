@@ -442,6 +442,520 @@ function renderRPM(labels, data) {
   }
 }
 
+// Render Method Distribution Chart
+function renderMethodChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  
+  // Only render if dashboard tab is active
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab || !dashboardTab.classList.contains('active')) {
+    return;
+  }
+  
+  const ctx = document.getElementById("methodChart");
+  if (!ctx) return;
+  
+  if (window.methodChart && window.methodChart instanceof Chart) {
+    try {
+      window.methodChart.destroy();
+    } catch (e) {
+      console.warn('Error destroying methodChart:', e);
+    }
+  }
+  
+  if (!data || data.length === 0) {
+    return;
+  }
+  
+  const labels = data.map(item => item[0] || item.method || 'Unknown');
+  const values = data.map(item => item[1] || item.count || 0);
+  
+  // Method colors
+  const methodColors = {
+    'GET': 'rgba(59, 130, 246, 0.8)',
+    'POST': 'rgba(16, 185, 129, 0.8)',
+    'PUT': 'rgba(245, 158, 11, 0.8)',
+    'DELETE': 'rgba(239, 68, 68, 0.8)',
+    'PATCH': 'rgba(139, 92, 246, 0.8)',
+    'HEAD': 'rgba(99, 102, 241, 0.8)',
+    'OPTIONS': 'rgba(236, 72, 153, 0.8)'
+  };
+  
+  const backgroundColors = labels.map(method => methodColors[method] || 'rgba(148, 163, 184, 0.8)');
+  
+  window.methodChart = new Chart(ctx.getContext("2d"), {
+    type: "doughnut",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: backgroundColors,
+        borderWidth: 2,
+        borderColor: 'var(--bg-primary)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: 'var(--text-primary)',
+            padding: 15
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Render Status Codes Pie Chart
+function renderStatusChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  
+  // Only render if dashboard tab is active
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab || !dashboardTab.classList.contains('active')) {
+    return;
+  }
+  
+  const ctx = document.getElementById("statusChart");
+  if (!ctx) return;
+  
+  if (window.statusChart && window.statusChart instanceof Chart) {
+    try {
+      window.statusChart.destroy();
+    } catch (e) {
+      console.warn('Error destroying statusChart:', e);
+    }
+  }
+  
+  if (!data || data.length === 0) {
+    return;
+  }
+  
+  const labels = data.map(item => item[0] || item.status || 'Unknown');
+  const values = data.map(item => item[1] || item.count || 0);
+  
+  // Status code colors
+  const getStatusColor = (status) => {
+    const code = parseInt(status);
+    if (code >= 200 && code < 300) return 'rgba(16, 185, 129, 0.8)'; // Success - Green
+    if (code >= 300 && code < 400) return 'rgba(59, 130, 246, 0.8)'; // Redirect - Blue
+    if (code >= 400 && code < 500) return 'rgba(245, 158, 11, 0.8)'; // Client Error - Yellow
+    if (code >= 500) return 'rgba(239, 68, 68, 0.8)'; // Server Error - Red
+    return 'rgba(148, 163, 184, 0.8)'; // Unknown - Gray
+  };
+  
+  const backgroundColors = labels.map(status => getStatusColor(status));
+  
+  window.statusChart = new Chart(ctx.getContext("2d"), {
+    type: "pie",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: backgroundColors,
+        borderWidth: 2,
+        borderColor: 'var(--bg-primary)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: 'var(--text-primary)',
+            padding: 15
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Render Top User Agents Chart
+function renderUserAgentChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  
+  // Only render if dashboard tab is active
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab || !dashboardTab.classList.contains('active')) {
+    return;
+  }
+  
+  const ctx = document.getElementById("userAgentChart");
+  if (!ctx) return;
+  
+  if (window.userAgentChart && window.userAgentChart instanceof Chart) {
+    try {
+      window.userAgentChart.destroy();
+    } catch (e) {
+      console.warn('Error destroying userAgentChart:', e);
+    }
+  }
+  
+  if (!data || data.length === 0) {
+    return;
+  }
+  
+  const labels = data.map(item => {
+    const agent = item[0] || item.agent || 'Unknown';
+    // Truncate long labels
+    return agent.length > 50 ? agent.substring(0, 50) + '...' : agent;
+  });
+  const values = data.map(item => item[1] || item.count || 0);
+  
+  window.userAgentChart = new Chart(ctx.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Requests',
+        data: values,
+        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+        borderColor: 'rgba(99, 102, 241, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      indexAxis: 'y',
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        },
+        y: {
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              const index = context[0].dataIndex;
+              return data[index][0] || data[index].agent || 'Unknown';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Render Top Referers Chart
+function renderRefererChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  
+  // Only render if dashboard tab is active
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab || !dashboardTab.classList.contains('active')) {
+    return;
+  }
+  
+  const ctx = document.getElementById("refererChart");
+  if (!ctx) return;
+  
+  if (window.refererChart && window.refererChart instanceof Chart) {
+    try {
+      window.refererChart.destroy();
+    } catch (e) {
+      console.warn('Error destroying refererChart:', e);
+    }
+  }
+  
+  if (!data || data.length === 0) {
+    return;
+  }
+  
+  const labels = data.map(item => {
+    const referer = item[0] || item.referer || 'Unknown';
+    // Truncate long labels
+    return referer.length > 50 ? referer.substring(0, 50) + '...' : referer;
+  });
+  const values = data.map(item => item[1] || item.count || 0);
+  
+  window.refererChart = new Chart(ctx.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Requests',
+        data: values,
+        backgroundColor: 'rgba(139, 92, 246, 0.8)',
+        borderColor: 'rgba(139, 92, 246, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      indexAxis: 'y',
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        },
+        y: {
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              const index = context[0].dataIndex;
+              return data[index][0] || data[index].referer || 'Unknown';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Render Size Distribution Chart
+function renderSizeChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  
+  // Only render if dashboard tab is active
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab || !dashboardTab.classList.contains('active')) {
+    return;
+  }
+  
+  const ctx = document.getElementById("sizeChart");
+  if (!ctx) return;
+  
+  if (window.sizeChart && window.sizeChart instanceof Chart) {
+    try {
+      window.sizeChart.destroy();
+    } catch (e) {
+      console.warn('Error destroying sizeChart:', e);
+    }
+  }
+  
+  if (!data || data.length === 0) {
+    return;
+  }
+  
+  // Sort by size order
+  const sizeOrder = ['< 1 KB', '1-10 KB', '10-100 KB', '100 KB - 1 MB', '> 1 MB'];
+  const sortedData = sizeOrder.map(range => {
+    const found = data.find(item => item[0] === range);
+    return found || [range, 0];
+  });
+  
+  const labels = sortedData.map(item => item[0]);
+  const values = sortedData.map(item => item[1] || 0);
+  
+  window.sizeChart = new Chart(ctx.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Requests',
+        data: values,
+        backgroundColor: [
+          'rgba(16, 185, 129, 0.8)',
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(245, 158, 11, 0.8)',
+          'rgba(239, 68, 68, 0.8)',
+          'rgba(139, 92, 246, 0.8)'
+        ],
+        borderColor: [
+          'rgba(16, 185, 129, 1)',
+          'rgba(59, 130, 246, 1)',
+          'rgba(245, 158, 11, 1)',
+          'rgba(239, 68, 68, 1)',
+          'rgba(139, 92, 246, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        },
+        x: {
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+}
+
+// Render Hourly Distribution Chart
+function renderHourlyChart(data) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  
+  // Only render if dashboard tab is active
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab || !dashboardTab.classList.contains('active')) {
+    return;
+  }
+  
+  const ctx = document.getElementById("hourlyChart");
+  if (!ctx) return;
+  
+  if (window.hourlyChart && window.hourlyChart instanceof Chart) {
+    try {
+      window.hourlyChart.destroy();
+    } catch (e) {
+      console.warn('Error destroying hourlyChart:', e);
+    }
+  }
+  
+  if (!data || data.length === 0) {
+    return;
+  }
+  
+  const labels = data.map((item) => {
+    try {
+      const date = new Date(item[0]);
+      if (isNaN(date.getTime())) {
+        return item[0].substring(11, 13) || item[0];
+      }
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } catch (err) {
+      return item[0] || 'Unknown';
+    }
+  });
+  const values = data.map(item => item[1] || 0);
+  
+  window.hourlyChart = new Chart(ctx.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Requests per Hour',
+        data: values,
+        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+        borderColor: 'rgba(99, 102, 241, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        },
+        x: {
+          ticks: {
+            color: 'var(--text-secondary)'
+          },
+          grid: {
+            color: 'var(--border-color)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+}
+
 function updateStatusIndicator(hasNewData) {
   const indicator = document.getElementById('statusIndicator');
   if (indicator) {
@@ -649,6 +1163,44 @@ async function processStatsData(s) {
   if (totalElem) {
     totalElem.textContent = s.total_entries || s.new_entries || 0;
   }
+  
+  // Render Method Distribution Chart (only if Chart.js is loaded)
+  if (typeof Chart !== 'undefined') {
+    const methods = s.methods || [];
+    if (methods.length > 0) {
+      renderMethodChart(methods);
+    }
+    
+    // Render Status Codes Pie Chart
+    const statusCodes = s.status || [];
+    if (statusCodes.length > 0) {
+      renderStatusChart(statusCodes);
+    }
+    
+    // Render Top User Agents Chart
+    const userAgents = s.top_user_agents || [];
+    if (userAgents.length > 0) {
+      renderUserAgentChart(userAgents);
+    }
+    
+    // Render Top Referers Chart
+    const referers = s.top_referers || [];
+    if (referers.length > 0) {
+      renderRefererChart(referers);
+    }
+    
+    // Render Size Distribution Chart
+    const sizeDist = s.size_distribution || [];
+    if (sizeDist.length > 0) {
+      renderSizeChart(sizeDist);
+    }
+    
+    // Render Hourly Distribution Chart
+    const hourly = s.hourly || [];
+    if (hourly.length > 0) {
+      renderHourlyChart(hourly);
+    }
+  }
 }
 
 // Helper function to get status class for display
@@ -708,6 +1260,24 @@ function switchTab(tabName) {
     setTimeout(() => {
       if (window.rpmChart) {
         window.rpmChart.resize();
+      }
+      if (window.methodChart) {
+        window.methodChart.resize();
+      }
+      if (window.statusChart) {
+        window.statusChart.resize();
+      }
+      if (window.userAgentChart) {
+        window.userAgentChart.resize();
+      }
+      if (window.refererChart) {
+        window.refererChart.resize();
+      }
+      if (window.sizeChart) {
+        window.sizeChart.resize();
+      }
+      if (window.hourlyChart) {
+        window.hourlyChart.resize();
       }
     }, 100);
   }

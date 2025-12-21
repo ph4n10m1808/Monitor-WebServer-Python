@@ -349,6 +349,11 @@ def api_stats():
     top_ips = Counter()
     top_paths = Counter()
     status = Counter()
+    methods = Counter()
+    user_agents = Counter()
+    referers = Counter()
+    hourly = defaultdict(int)
+    size_ranges = defaultdict(int)
 
     for e in entries:
         t = e.get('time')
@@ -364,6 +369,10 @@ def api_stats():
                 continue
             minute = dt.replace(second=0, microsecond=0)
             rpm[minute.isoformat()] += 1
+            
+            # Hourly distribution
+            hour = dt.replace(minute=0, second=0, microsecond=0)
+            hourly[hour.isoformat()] += 1
         except Exception:
             continue
         
@@ -373,9 +382,34 @@ def api_stats():
             top_paths[e['path']] += 1
         if e.get('status'):
             status[str(e['status'])] += 1
+        if e.get('method'):
+            methods[e['method']] += 1
+        if e.get('agent'):
+            # Truncate long user agents for better display
+            agent = e['agent'][:100] if len(e['agent']) > 100 else e['agent']
+            user_agents[agent] += 1
+        if e.get('referer'):
+            # Truncate long referers for better display
+            referer = e['referer'][:100] if len(e['referer']) > 100 else e['referer']
+            referers[referer] += 1
+        
+        # Size distribution (in KB ranges)
+        if e.get('size') is not None:
+            size_kb = e['size'] / 1024
+            if size_kb < 1:
+                size_ranges['< 1 KB'] += 1
+            elif size_kb < 10:
+                size_ranges['1-10 KB'] += 1
+            elif size_kb < 100:
+                size_ranges['10-100 KB'] += 1
+            elif size_kb < 1024:
+                size_ranges['100 KB - 1 MB'] += 1
+            else:
+                size_ranges['> 1 MB'] += 1
 
     # sort rpm by time (last 60 points)
     rpm_items = sorted(rpm.items())
+    hourly_items = sorted(hourly.items())
     
     # Lấy timestamp của log mới nhất
     latest_log = entries[0] if entries else None
@@ -392,6 +426,11 @@ def api_stats():
         'top_ips': top_ips.most_common(20),
         'top_paths': top_paths.most_common(20),
         'status': status.most_common(),
+        'methods': methods.most_common(),
+        'top_user_agents': user_agents.most_common(10),
+        'top_referers': referers.most_common(10),
+        'hourly': hourly_items,
+        'size_distribution': list(size_ranges.items()),
         'latest_time': latest_time,
         'total_entries': len(entries)
     })
@@ -409,6 +448,11 @@ def api_stats_since(timestamp):
     top_ips = Counter()
     top_paths = Counter()
     status = Counter()
+    methods = Counter()
+    user_agents = Counter()
+    referers = Counter()
+    hourly = defaultdict(int)
+    size_ranges = defaultdict(int)
 
     for e in entries:
         t = e.get('time')
@@ -423,6 +467,10 @@ def api_stats_since(timestamp):
                 continue
             minute = dt.replace(second=0, microsecond=0)
             rpm[minute.isoformat()] += 1
+            
+            # Hourly distribution
+            hour = dt.replace(minute=0, second=0, microsecond=0)
+            hourly[hour.isoformat()] += 1
         except Exception:
             continue
         
@@ -432,8 +480,31 @@ def api_stats_since(timestamp):
             top_paths[e['path']] += 1
         if e.get('status'):
             status[str(e['status'])] += 1
+        if e.get('method'):
+            methods[e['method']] += 1
+        if e.get('agent'):
+            agent = e['agent'][:100] if len(e['agent']) > 100 else e['agent']
+            user_agents[agent] += 1
+        if e.get('referer'):
+            referer = e['referer'][:100] if len(e['referer']) > 100 else e['referer']
+            referers[referer] += 1
+        
+        # Size distribution (in KB ranges)
+        if e.get('size') is not None:
+            size_kb = e['size'] / 1024
+            if size_kb < 1:
+                size_ranges['< 1 KB'] += 1
+            elif size_kb < 10:
+                size_ranges['1-10 KB'] += 1
+            elif size_kb < 100:
+                size_ranges['10-100 KB'] += 1
+            elif size_kb < 1024:
+                size_ranges['100 KB - 1 MB'] += 1
+            else:
+                size_ranges['> 1 MB'] += 1
 
     rpm_items = sorted(rpm.items())
+    hourly_items = sorted(hourly.items())
     
     latest_log = entries[0] if entries else None
     latest_time = None
@@ -449,6 +520,11 @@ def api_stats_since(timestamp):
         'top_ips': top_ips.most_common(20),
         'top_paths': top_paths.most_common(20),
         'status': status.most_common(),
+        'methods': methods.most_common(),
+        'top_user_agents': user_agents.most_common(10),
+        'top_referers': referers.most_common(10),
+        'hourly': hourly_items,
+        'size_distribution': list(size_ranges.items()),
         'latest_time': latest_time,
         'new_entries': len(entries)
     })

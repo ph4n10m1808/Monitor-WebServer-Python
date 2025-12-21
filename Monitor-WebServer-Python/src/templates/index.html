@@ -116,6 +116,111 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Charts Grid Row 2 -->
+                <div class="charts-grid">
+                    <!-- Method Distribution Chart -->
+                    <div class="dashboard-card chart-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span class="card-icon">⚡</span>
+                                HTTP Methods Distribution
+                            </h2>
+                            <p class="card-description">Phân bố các phương thức HTTP request</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="methodChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Codes Pie Chart -->
+                    <div class="dashboard-card chart-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span class="card-icon">📊</span>
+                                Status Codes Distribution
+                            </h2>
+                            <p class="card-description">Phân bố mã trạng thái HTTP</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid Row 3 -->
+                <div class="charts-grid">
+                    <!-- Top User Agents Chart -->
+                    <div class="dashboard-card chart-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span class="card-icon">🤖</span>
+                                Top User Agents
+                            </h2>
+                            <p class="card-description">Top 10 User Agents phổ biến nhất</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="userAgentChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Referers Chart -->
+                    <div class="dashboard-card chart-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span class="card-icon">🔗</span>
+                                Top Referers
+                            </h2>
+                            <p class="card-description">Top 10 Referers phổ biến nhất</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="refererChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid Row 4 -->
+                <div class="charts-grid">
+                    <!-- Size Distribution Chart -->
+                    <div class="dashboard-card chart-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span class="card-icon">📏</span>
+                                Size Distribution
+                            </h2>
+                            <p class="card-description">Phân bố kích thước response</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="sizeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hourly Distribution Chart -->
+                    <div class="dashboard-card chart-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span class="card-icon">🕐</span>
+                                Hourly Distribution
+                            </h2>
+                            <p class="card-description">Phân bố request theo giờ</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="hourlyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
