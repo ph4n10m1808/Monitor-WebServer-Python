@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Dashboard service
 FROM base AS dashboard
 COPY src/app.py .
+COPY src/create_user.py .
 COPY src/templates ./templates
 COPY src/static ./static
 EXPOSE 5000
@@ -17,6 +18,7 @@ ENV MONGO_HOST=mongodb
 ENV MONGO_PORT=27017
 ENV MONGO_DB=logdb
 ENV MONGO_COLLECTION=logs
+ENV SECRET_KEY=change-this-secret-key-in-production
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
 
 # Collector service

@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# MongoDB Data
+data/
+mongodb_data/
+
+# Log Files
+*.log
+logs/
+../logs/
+
+# Docker
+.dockerignore
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Security
+*.key
+*.pem
+*.crt
+secrets/
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Temporary Files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Backup Files
+*.bak
+*.backup
+*~
+
+# Distribution
+*.tar.gz
+*.zip
+
+# Node (if using npm for frontend)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Project Specific
+# Uncomment if you don't want to track these
+# access.log
+# error.log
