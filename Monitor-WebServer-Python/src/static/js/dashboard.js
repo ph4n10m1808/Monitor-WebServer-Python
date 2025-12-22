@@ -1,3 +1,54 @@
+// ===== OPTIMIZATION: Debounce & Throttle Utilities =====
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function throttle(func, wait) {
+  let inThrottle;
+  return function (...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), wait);
+    }
+  };
+}
+
+// ===== OPTIMIZATION: Cache Management =====
+const cache = {
+  data: new Map(),
+  timestamps: new Map(),
+  TTL: 2000, // 2 seconds cache
+
+  set(key, value) {
+    this.data.set(key, value);
+    this.timestamps.set(key, Date.now());
+  },
+
+  get(key) {
+    const timestamp = this.timestamps.get(key);
+    if (!timestamp || Date.now() - timestamp > this.TTL) {
+      this.data.delete(key);
+      this.timestamps.delete(key);
+      return null;
+    }
+    return this.data.get(key);
+  },
+
+  clear() {
+    this.data.clear();
+    this.timestamps.clear();
+  },
+};
+
 let lastUpdateTime = null;
 let updateInterval = 3000; // 3 seconds for stats
 let isUpdating = false;
@@ -26,15 +77,26 @@ async function syncLogs() {
 }
 
 async function fetchStats(timestamp = null) {
-  let url;
-  url = "/api/stats";
+  // Check cache first
+  const cacheKey = `stats_${timestamp || "latest"}`;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    console.log("Using cached stats");
+    return cached;
+  }
+
+  let url = "/api/stats";
   try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      throw new Error(`HTTP error! status: ${r.status}`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const data = await r.json();
-    console.log("Fetched stats from:", url, data);
+    const data = await response.json();
+
+    // Cache the result
+    cache.set(cacheKey, data);
+
+    console.log("Fetched stats from:", url);
     return data;
   } catch (error) {
     console.error("Error fetching stats:", error);
@@ -43,6 +105,14 @@ async function fetchStats(timestamp = null) {
 }
 
 async function fetchLogs(page = 1, limit = 50, filters = {}) {
+  // Check cache
+  const cacheKey = `logs_${page}_${limit}_${JSON.stringify(filters)}`;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    console.log("Using cached logs");
+    return cached;
+  }
+
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -61,8 +131,13 @@ async function fetchLogs(page = 1, limit = 50, filters = {}) {
   if (filters.agent) params.append("agent", filters.agent);
 
   const url = `/api/logs?${params.toString()}`;
-  const r = await fetch(url);
-  return r.json();
+  const response = await fetch(url);
+  const data = await response.json();
+
+  // Cache the result
+  cache.set(cacheKey, data);
+
+  return data;
 }
 
 function formatTime(timeString) {
@@ -333,6 +408,11 @@ function stopLogsAutoRefresh() {
   }
 }
 
+// ===== OPTIMIZATION: Debounced/Throttled chart updates =====
+const debouncedRenderRPM = debounce(renderRPM, 300);
+const debouncedRenderMethodChart = debounce(renderMethodChart, 300);
+const debouncedRenderStatusChart = debounce(renderStatusChart, 300);
+
 function renderRPM(labels, data) {
   console.log("renderRPM called with labels:", labels, "data:", data);
 
@@ -398,7 +478,12 @@ function renderRPM(labels, data) {
         responsive: true,
         maintainAspectRatio: true,
         animation: {
-          duration: 0,
+          duration: 0, // Disable animation for better performance
+        },
+        interaction: {
+          mode: "nearest",
+          axis: "x",
+          intersect: false,
         },
         scales: {
           y: {
@@ -999,6 +1084,13 @@ function updateStatusIndicator(hasNewData) {
   }
 }
 
+// ===== OPTIMIZATION: Batch DOM updates with requestAnimationFrame =====
+function batchDOMUpdate(updates) {
+  requestAnimationFrame(() => {
+    updates.forEach((update) => update());
+  });
+}
+
 async function update() {
   if (isUpdating) return;
   isUpdating = true;
@@ -1011,10 +1103,19 @@ async function update() {
       lastUpdateTime = s.latest_time;
     }
 
-    // Process and display stats data
+    // Process and display stats data with batched updates
     await processStatsData(s);
 
-    updateStatusIndicator(hasNewData);
+    // Batch status indicator updates
+    batchDOMUpdate([
+      () => updateStatusIndicator(hasNewData),
+      () => {
+        const totalEl = document.getElementById("totalEntries");
+        if (totalEl && s.total_entries) {
+          totalEl.textContent = s.total_entries.toLocaleString();
+        }
+      },
+    ]);
   } catch (error) {
     console.error("Error fetching stats:", error);
     // Hiển thị lỗi trên UI nếu cần

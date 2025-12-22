@@ -175,6 +175,9 @@ body {
   background: var(--text-muted);
 }
 
+/* ============================================
+   Animations - Optimized
+   ============================================ */
 @keyframes pulse {
   0%,
   100% {
@@ -183,6 +186,32 @@ body {
   50% {
     opacity: 0.5;
   }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply hardware acceleration to animated elements */
+.status-dot,
+.dashboard-card {
+  will-change: transform;
+}
+
+.status-badge.status-live .status-dot {
+  background: var(--success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-badge.status-idle .status-dot {
+  background: var(--text-muted);
 }
 
 .total-badge {
@@ -198,6 +227,27 @@ body {
 
 .total-label {
   color: var(--text-muted);
+}
+
+.total-value {
+  color: var(--primary-light);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.dashboard-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-card:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
 }
 
 .total-value {
@@ -383,8 +433,14 @@ body {
   gap: var(--spacing-sm);
   max-height: 500px;
   overflow-y: auto;
+  /* Optimize scrolling performance */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light) var(--bg-secondary);
 }
 
+/* Custom scrollbar for webkit browsers */
 .stats-list::-webkit-scrollbar {
   width: 6px;
 }
@@ -397,6 +453,11 @@ body {
 .stats-list::-webkit-scrollbar-thumb {
   background: var(--border-light);
   border-radius: var(--radius-sm);
+  transition: background 0.2s ease;
+}
+
+.stats-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 .stats-list::-webkit-scrollbar-thumb:hover {
