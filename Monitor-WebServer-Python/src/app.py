@@ -1,5 +1,5 @@
 # app.py - Optimized version
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for, flash
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
@@ -9,6 +9,8 @@ from bson import ObjectId
 from dateutil import parser as dateparser
 import gzip
 import functools
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 # MongoDB connection
 MONGO_HOST = os.getenv('MONGO_HOST', 'mongodb')
@@ -20,6 +22,7 @@ BASE_DIR = '/app/logs'
 LOG_PATH = os.getenv('LOG_PATH', os.path.join(BASE_DIR, 'access.log'))
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # ===== TỐI ƯU: GZIP Compression cho API responses =====
 def gzipped(f):
@@ -94,6 +97,42 @@ def get_position_db():
     client = get_mongo_client()
     db = client[MONGO_DB]
     return db['file_positions']
+
+def get_users_db():
+    """Get MongoDB collection for users"""
+    client = get_mongo_client()
+    db = client[MONGO_DB]
+    return db['users']
+
+# ===== Authentication Functions =====
+def init_default_user():
+    """Create default admin user if not exists"""
+    users_collection = get_users_db()
+    existing_user = users_collection.find_one({'username': 'admin'})
+    if not existing_user:
+        users_collection.insert_one({
+            'username': 'admin',
+            'password': generate_password_hash('admin'),
+            'created_at': datetime.utcnow()
+        })
+        print('✓ Default admin user created (username: admin, password: admin)')
+
+def verify_user(username, password):
+    """Verify user credentials"""
+    users_collection = get_users_db()
+    user = users_collection.find_one({'username': username})
+    if user and check_password_hash(user['password'], password):
+        return True
+    return False
+
+def login_required(f):
+    """Decorator to protect routes that require authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ===== TỐI ƯU 2: MongoDB Indexes cho performance =====
 def ensure_indexes():
@@ -327,6 +366,7 @@ def build_search_query():
 
 # ===== TỐI ƯU 4: Sử dụng MongoDB Aggregation Pipeline thay vì load hết data =====
 @app.route('/api/stats')
+@login_required
 def api_stats():
     """API trả về thống kê log - tối ưu với aggregation pipeline"""
     try:
@@ -437,6 +477,7 @@ def api_stats():
         }), 500
 
 @app.route('/api/logs')
+@login_required
 def api_logs():
     """API trả về danh sách logs với search và filter"""
     try:
@@ -480,7 +521,38 @@ def api_logs():
             'message': str(e)
         }), 500
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page and handler"""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        if not username or not password:
+            return render_template('login.html', error='Vui lòng nhập tên đăng nhập và mật khẩu')
+        
+        if verify_user(username, password):
+            session['username'] = username
+            session['login_time'] = datetime.utcnow().isoformat()
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='Tên đăng nhập hoặc mật khẩu không đúng')
+    
+    # If already logged in, redirect to dashboard
+    if 'username' in session:
+        return redirect(url_for('index'))
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout handler"""
+    session.pop('username', None)
+    session.pop('login_time', None)
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
     """Trang chủ - tự động sync logs từ file vào DB lần đầu"""
     # Ensure indexes on first load
@@ -502,6 +574,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/api/sync', methods=['POST'])
+@login_required
 def api_sync():
     """API để trigger sync logs manually"""
     force = request.json.get('force', False) if request.is_json else False
@@ -509,4 +582,6 @@ def api_sync():
     return jsonify(result)
 
 if __name__ == '__main__':
+    # Initialize default user on startup
+    init_default_user()
     app.run(host='0.0.0.0', port=5000, debug=True)

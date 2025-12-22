@@ -1,2 +1,4 @@
 # Logs folder
 logs/
+Vagrantfile
+.vagrant/*

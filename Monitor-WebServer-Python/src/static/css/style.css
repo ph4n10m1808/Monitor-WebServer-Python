@@ -1017,3 +1017,34 @@ body {
     padding: var(--spacing-md);
   }
 }
+
+/* ============================================
+   Logout Button & User Actions Styles
+   ============================================ */
+.user-actions {
+  display: flex;
+  align-items: center;
+}
+
+.btn-logout {
+  display: inline-block;
+  color: var(--danger);
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background-color: var(--danger);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-logout:active {
+  transform: translateY(0);
+}

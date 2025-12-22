@@ -56,6 +56,25 @@
           <div class="update-time">
             <span id="updateStatus" class="update-text">Initializing...</span>
           </div>
+          <div class="user-actions" style="margin-left: 20px">
+            <span style="color: #64748b; margin-right: 10px"
+              >👤 {{ session.username }}</span
+            >
+            <a
+              href="/logout"
+              class="btn-logout"
+              style="
+                color: #ef4444;
+                text-decoration: none;
+                padding: 5px 15px;
+                border: 1px solid #ef4444;
+                border-radius: 5px;
+                font-size: 14px;
+                transition: all 0.3s;
+              "
+              >Đăng xuất</a
+            >
+          </div>
         </div>
       </div>
     </header>
