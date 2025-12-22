@@ -1,476 +1,509 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Web Server Log Monitor - Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/style.css" />
-</head>
-<body>
+  </head>
+  <body>
     <!-- Header -->
     <header class="main-header">
-        <div class="header-content">
-            <div class="header-left">
-                <h1 class="logo">
-                    <span class="logo-icon">📊</span>
-                    <span class="logo-text">Log Monitor</span>
-                </h1>
-                <p class="header-subtitle">Real-time Web Server Log Analysis</p>
-            </div>
-            <div class="header-right">
-                <div class="status-indicators">
-                    <div class="status-item">
-                        <span id="statusIndicator" class="status-badge status-idle">
-                            <span class="status-dot"></span>
-                            <span class="status-text">Idle</span>
-                        </span>
-                    </div>
-                    <div class="status-item">
-                        <span class="total-badge">
-                            <span class="total-label">Total Entries:</span>
-                            <span id="totalEntries" class="total-value">0</span>
-                        </span>
-                    </div>
-                </div>
-                <div class="update-time">
-                    <span id="updateStatus" class="update-text">Initializing...</span>
-                </div>
-            </div>
+      <div class="header-content">
+        <div class="header-left">
+          <h1 class="logo">
+            <span class="logo-icon">📊</span>
+            <span class="logo-text">Log Monitor</span>
+          </h1>
+          <p class="header-subtitle">Real-time Web Server Log Analysis</p>
         </div>
+        <div class="header-right">
+          <div class="status-indicators">
+            <div class="status-item">
+              <span id="statusIndicator" class="status-badge status-idle">
+                <span class="status-dot"></span>
+                <span class="status-text">Idle</span>
+              </span>
+            </div>
+            <div class="status-item">
+              <span class="total-badge">
+                <span class="total-label">Total Entries:</span>
+                <span id="totalEntries" class="total-value">0</span>
+              </span>
+            </div>
+          </div>
+          <div class="update-time">
+            <span id="updateStatus" class="update-text">Initializing...</span>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Main Container -->
     <main class="main-container">
-        <!-- Tab Navigation -->
-        <nav class="tab-navigation">
-            <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
-                <span class="tab-icon">📈</span>
-                <span class="tab-text">Dashboard</span>
-            </button>
-            <button class="tab-btn" data-tab="search" onclick="switchTab('search')">
-                <span class="tab-icon">🔍</span>
-                <span class="tab-text">Search Logs</span>
-            </button>
-        </nav>
+      <!-- Tab Navigation -->
+      <nav class="tab-navigation">
+        <button
+          class="tab-btn active"
+          data-tab="dashboard"
+          onclick="switchTab('dashboard')"
+        >
+          <span class="tab-icon">📈</span>
+          <span class="tab-text">Dashboard</span>
+        </button>
+        <button class="tab-btn" data-tab="search" onclick="switchTab('search')">
+          <span class="tab-icon">🔍</span>
+          <span class="tab-text">Search Logs</span>
+        </button>
+      </nav>
 
-        <!-- Dashboard Tab Content -->
-        <section id="dashboardTab" class="tab-content active">
-            <div class="dashboard-section">
-                <!-- RPM Chart Card -->
-                <div class="dashboard-card chart-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <span class="card-icon">📈</span>
-                            Requests Per Minute (RPM)
-                        </h2>
-                        <p class="card-description">Biểu đồ đường hiển thị số lượng request mỗi phút theo thời gian</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-wrapper">
-                            <canvas id="rpmChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Stats Grid -->
-                <div class="stats-grid">
-                    <!-- Top IPs Card -->
-                    <div class="dashboard-card stats-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">🔝</span>
-                                Top IPs
-                            </h2>
-                            <span class="card-badge">Top 20</span>
-                        </div>
-                        <div class="card-body">
-                            <ul id="topIps" class="stats-list"></ul>
-                        </div>
-                    </div>
-
-                    <!-- Top Paths Card -->
-                    <div class="dashboard-card stats-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">🛤️</span>
-                                Top Paths
-                            </h2>
-                            <span class="card-badge">Top 20</span>
-                        </div>
-                        <div class="card-body">
-                            <ul id="topPaths" class="stats-list"></ul>
-                        </div>
-                    </div>
-
-                    <!-- Status Codes Card -->
-                    <div class="dashboard-card stats-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">📊</span>
-                                Status Codes
-                            </h2>
-                        </div>
-                        <div class="card-body">
-                            <ul id="topStatusCodes" class="stats-list"></ul>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Charts Grid Row 2 -->
-                <div class="charts-grid">
-                    <!-- Method Distribution Chart -->
-                    <div class="dashboard-card chart-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">⚡</span>
-                                HTTP Methods Distribution
-                            </h2>
-                            <p class="card-description">Phân bố các phương thức HTTP request</p>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrapper">
-                                <canvas id="methodChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Status Codes Pie Chart -->
-                    <div class="dashboard-card chart-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">📊</span>
-                                Status Codes Distribution
-                            </h2>
-                            <p class="card-description">Phân bố mã trạng thái HTTP</p>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrapper">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Charts Grid Row 3 -->
-                <div class="charts-grid">
-                    <!-- Top User Agents Chart -->
-                    <div class="dashboard-card chart-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">🤖</span>
-                                Top User Agents
-                            </h2>
-                            <p class="card-description">Top 10 User Agents phổ biến nhất</p>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrapper">
-                                <canvas id="userAgentChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Top Referers Chart -->
-                    <div class="dashboard-card chart-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">🔗</span>
-                                Top Referers
-                            </h2>
-                            <p class="card-description">Top 10 Referers phổ biến nhất</p>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrapper">
-                                <canvas id="refererChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Charts Grid Row 4 -->
-                <div class="charts-grid">
-                    <!-- Size Distribution Chart -->
-                    <div class="dashboard-card chart-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">📏</span>
-                                Size Distribution
-                            </h2>
-                            <p class="card-description">Phân bố kích thước response</p>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrapper">
-                                <canvas id="sizeChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Hourly Distribution Chart -->
-                    <div class="dashboard-card chart-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span class="card-icon">🕐</span>
-                                Hourly Distribution
-                            </h2>
-                            <p class="card-description">Phân bố request theo giờ</p>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrapper">
-                                <canvas id="hourlyChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      <!-- Dashboard Tab Content -->
+      <section id="dashboardTab" class="tab-content active">
+        <div class="dashboard-section">
+          <!-- RPM Chart Card -->
+          <div class="dashboard-card chart-card">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span class="card-icon">📈</span>
+                Requests Per Minute (RPM)
+              </h2>
+              <p class="card-description">
+                Biểu đồ đường hiển thị số lượng request mỗi phút theo thời gian
+              </p>
             </div>
-        </section>
-
-        <!-- Search Tab Content -->
-        <section id="searchTab" class="tab-content">
-            <div class="search-section">
-                <!-- Search Controls -->
-                <div class="search-controls-card">
-                    <div class="controls-header">
-                        <h2 class="section-title">
-                            <span class="section-icon">🔍</span>
-                            Search & Filter Logs
-                        </h2>
-                        <div class="controls-actions">
-                            <button class="btn btn-icon" onclick="loadLogs()" title="Refresh">
-                                <span>🔄</span>
-                                <span>Refresh</span>
-                            </button>
-                            <button class="btn btn-icon" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="Toggle Auto-refresh">
-                                <span id="autoRefreshIcon">⏸️</span>
-                                <span id="autoRefreshText">Pause</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Search Form -->
-                    <div class="search-form-wrapper">
-                        <form id="searchForm" class="search-form" onsubmit="handleSearch(event)">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="searchIp" class="form-label">
-                                        <span class="label-icon">🌐</span>
-                                        IP Address
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="searchIp"
-                                        name="ip"
-                                        class="form-input"
-                                        placeholder="e.g. 192.168.1.1"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchIdent" class="form-label">
-                                        <span class="label-icon">🆔</span>
-                                        Ident
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="searchIdent"
-                                        name="ident"
-                                        class="form-input"
-                                        placeholder="e.g. -"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchUser" class="form-label">
-                                        <span class="label-icon">👤</span>
-                                        User
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="searchUser"
-                                        name="user"
-                                        class="form-input"
-                                        placeholder="e.g. -"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchMethod" class="form-label">
-                                        <span class="label-icon">⚡</span>
-                                        HTTP Method
-                                    </label>
-                                    <select id="searchMethod" name="method" class="form-select">
-                                        <option value="">All Methods</option>
-                                        <option value="GET">GET</option>
-                                        <option value="POST">POST</option>
-                                        <option value="PUT">PUT</option>
-                                        <option value="DELETE">DELETE</option>
-                                        <option value="PATCH">PATCH</option>
-                                        <option value="HEAD">HEAD</option>
-                                        <option value="OPTIONS">OPTIONS</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchPath" class="form-label">
-                                        <span class="label-icon">📍</span>
-                                        Request Path
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="searchPath"
-                                        name="path"
-                                        class="form-input"
-                                        placeholder="e.g. /api/users"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchStatus" class="form-label">
-                                        <span class="label-icon">🔢</span>
-                                        Status Code
-                                    </label>
-                                    <input
-                                        type="number"
-                                        id="searchStatus"
-                                        name="status"
-                                        class="form-input"
-                                        placeholder="e.g. 200"
-                                        min="100"
-                                        max="599"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchSizeMin" class="form-label">
-                                        <span class="label-icon">📏</span>
-                                        Size Min (bytes)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        id="searchSizeMin"
-                                        name="size_min"
-                                        class="form-input"
-                                        placeholder="0"
-                                        min="0"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchSizeMax" class="form-label">
-                                        <span class="label-icon">📏</span>
-                                        Size Max (bytes)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        id="searchSizeMax"
-                                        name="size_max"
-                                        class="form-input"
-                                        placeholder="1000000"
-                                        min="0"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchReferer" class="form-label">
-                                        <span class="label-icon">🔗</span>
-                                        Referer
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="searchReferer"
-                                        name="referer"
-                                        class="form-input"
-                                        placeholder="e.g. http://example.com"
-                                    />
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="searchAgent" class="form-label">
-                                        <span class="label-icon">🤖</span>
-                                        User Agent
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="searchAgent"
-                                        name="agent"
-                                        class="form-input"
-                                        placeholder="e.g. Mozilla"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">
-                                    <span>🔍</span>
-                                    <span>Search</span>
-                                </button>
-                                <button type="button" class="btn btn-secondary" onclick="clearSearch()">
-                                    <span>🗑️</span>
-                                    <span>Clear</span>
-                                </button>
-                            </div>
-                        </form>
-
-                        <!-- Active Filters -->
-                        <div id="activeFilters" class="active-filters"></div>
-                    </div>
-                </div>
-
-                <!-- Logs Table -->
-                <div class="logs-table-card">
-                    <div class="table-header">
-                        <h2 class="section-title">
-                            <span class="section-icon">📋</span>
-                            Log Entries
-                        </h2>
-                    </div>
-                    <div class="table-wrapper">
-                        <table class="logs-table">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>IP Address</th>
-                                    <th>Ident</th>
-                                    <th>User</th>
-                                    <th>Method</th>
-                                    <th>Path</th>
-                                    <th>Status</th>
-                                    <th>Size</th>
-                                    <th>Referer</th>
-                                    <th>User Agent</th>
-                                </tr>
-                            </thead>
-                            <tbody id="logsTableBody">
-                                <tr>
-                                    <td colspan="10" class="loading-cell">
-                                        <div class="loading-spinner"></div>
-                                        <span>Loading logs...</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="pagination-wrapper">
-                        <div class="pagination">
-                            <button class="btn btn-pagination" id="prevBtn" onclick="changePage(-1)">
-                                <span>←</span>
-                                <span>Previous</span>
-                            </button>
-                            <div class="pagination-info">
-                                <span id="pageInfo">Page 1 of 1</span>
-                            </div>
-                            <button class="btn btn-pagination" id="nextBtn" onclick="changePage(1)">
-                                <span>Next</span>
-                                <span>→</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="card-body">
+              <div class="chart-wrapper">
+                <canvas id="rpmChart"></canvas>
+              </div>
             </div>
-        </section>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="stats-grid">
+            <!-- Top IPs Card -->
+            <div class="dashboard-card stats-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">🔝</span>
+                  Top IPs
+                </h2>
+                <span class="card-badge">Top 20</span>
+              </div>
+              <div class="card-body">
+                <ul id="topIps" class="stats-list"></ul>
+              </div>
+            </div>
+
+            <!-- Top Paths Card -->
+            <div class="dashboard-card stats-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">🛤️</span>
+                  Top Paths
+                </h2>
+                <span class="card-badge">Top 20</span>
+              </div>
+              <div class="card-body">
+                <ul id="topPaths" class="stats-list"></ul>
+              </div>
+            </div>
+
+            <!-- Status Codes Card -->
+            <div class="dashboard-card stats-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">📊</span>
+                  Status Codes
+                </h2>
+              </div>
+              <div class="card-body">
+                <ul id="topStatusCodes" class="stats-list"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Grid Row 2 -->
+          <div class="charts-grid">
+            <!-- Method Distribution Chart -->
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">⚡</span>
+                  HTTP Methods Distribution
+                </h2>
+                <p class="card-description">
+                  Phân bố các phương thức HTTP request
+                </p>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper">
+                  <canvas id="methodChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status Codes Pie Chart -->
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">📊</span>
+                  Status Codes Distribution
+                </h2>
+                <p class="card-description">Phân bố mã trạng thái HTTP</p>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper">
+                  <canvas id="statusChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Grid Row 3 -->
+          <div class="charts-grid">
+            <!-- Top User Agents Chart -->
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">🤖</span>
+                  Top User Agents
+                </h2>
+                <p class="card-description">Top 10 User Agents phổ biến nhất</p>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper">
+                  <canvas id="userAgentChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Referers Chart -->
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">🔗</span>
+                  Top Referers
+                </h2>
+                <p class="card-description">Top 10 Referers phổ biến nhất</p>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper">
+                  <canvas id="refererChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Grid Row 4 -->
+          <div class="charts-grid">
+            <!-- Size Distribution Chart -->
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">📏</span>
+                  Size Distribution
+                </h2>
+                <p class="card-description">Phân bố kích thước response</p>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper">
+                  <canvas id="sizeChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hourly Distribution Chart -->
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <span class="card-icon">🕐</span>
+                  Hourly Distribution
+                </h2>
+                <p class="card-description">Phân bố request theo giờ</p>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper">
+                  <canvas id="hourlyChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search Tab Content -->
+      <section id="searchTab" class="tab-content">
+        <div class="search-section">
+          <!-- Search Controls -->
+          <div class="search-controls-card">
+            <div class="controls-header">
+              <h2 class="section-title">
+                <span class="section-icon">🔍</span>
+                Search & Filter Logs
+              </h2>
+              <div class="controls-actions">
+                <button
+                  class="btn btn-icon"
+                  onclick="loadLogs()"
+                  title="Refresh"
+                >
+                  <span>🔄</span>
+                  <span>Refresh</span>
+                </button>
+                <button
+                  class="btn btn-icon"
+                  id="autoRefreshBtn"
+                  onclick="toggleAutoRefresh()"
+                  title="Toggle Auto-refresh"
+                >
+                  <span id="autoRefreshIcon">⏸️</span>
+                  <span id="autoRefreshText">Pause</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search Form -->
+            <div class="search-form-wrapper">
+              <form
+                id="searchForm"
+                class="search-form"
+                onsubmit="handleSearch(event)"
+              >
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="searchIp" class="form-label">
+                      <span class="label-icon">🌐</span>
+                      IP Address
+                    </label>
+                    <input
+                      type="text"
+                      id="searchIp"
+                      name="ip"
+                      class="form-input"
+                      placeholder="e.g. 192.168.1.1"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchIdent" class="form-label">
+                      <span class="label-icon">🆔</span>
+                      Ident
+                    </label>
+                    <input
+                      type="text"
+                      id="searchIdent"
+                      name="ident"
+                      class="form-input"
+                      placeholder="e.g. -"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchUser" class="form-label">
+                      <span class="label-icon">👤</span>
+                      User
+                    </label>
+                    <input
+                      type="text"
+                      id="searchUser"
+                      name="user"
+                      class="form-input"
+                      placeholder="e.g. -"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchMethod" class="form-label">
+                      <span class="label-icon">⚡</span>
+                      HTTP Method
+                    </label>
+                    <select id="searchMethod" name="method" class="form-select">
+                      <option value="">All Methods</option>
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                      <option value="PATCH">PATCH</option>
+                      <option value="HEAD">HEAD</option>
+                      <option value="OPTIONS">OPTIONS</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchPath" class="form-label">
+                      <span class="label-icon">📍</span>
+                      Request Path
+                    </label>
+                    <input
+                      type="text"
+                      id="searchPath"
+                      name="path"
+                      class="form-input"
+                      placeholder="e.g. /api/users"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchStatus" class="form-label">
+                      <span class="label-icon">🔢</span>
+                      Status Code
+                    </label>
+                    <input
+                      type="number"
+                      id="searchStatus"
+                      name="status"
+                      class="form-input"
+                      placeholder="e.g. 200"
+                      min="100"
+                      max="599"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchSizeMin" class="form-label">
+                      <span class="label-icon">📏</span>
+                      Size Min (bytes)
+                    </label>
+                    <input
+                      type="number"
+                      id="searchSizeMin"
+                      name="size_min"
+                      class="form-input"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchSizeMax" class="form-label">
+                      <span class="label-icon">📏</span>
+                      Size Max (bytes)
+                    </label>
+                    <input
+                      type="number"
+                      id="searchSizeMax"
+                      name="size_max"
+                      class="form-input"
+                      placeholder="1000000"
+                      min="0"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchReferer" class="form-label">
+                      <span class="label-icon">🔗</span>
+                      Referer
+                    </label>
+                    <input
+                      type="text"
+                      id="searchReferer"
+                      name="referer"
+                      class="form-input"
+                      placeholder="e.g. http://example.com"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="searchAgent" class="form-label">
+                      <span class="label-icon">🤖</span>
+                      User Agent
+                    </label>
+                    <input
+                      type="text"
+                      id="searchAgent"
+                      name="agent"
+                      class="form-input"
+                      placeholder="e.g. Mozilla"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary">
+                    <span>🔍</span>
+                    <span>Search</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    onclick="clearSearch()"
+                  >
+                    <span>🗑️</span>
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </form>
+
+              <!-- Active Filters -->
+              <div id="activeFilters" class="active-filters"></div>
+            </div>
+          </div>
+
+          <!-- Logs Table -->
+          <div class="logs-table-card">
+            <div class="table-header">
+              <h2 class="section-title">
+                <span class="section-icon">📋</span>
+                Log Entries
+              </h2>
+            </div>
+            <div class="table-wrapper">
+              <table class="logs-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>IP Address</th>
+                    <th>Ident</th>
+                    <th>User</th>
+                    <th>Method</th>
+                    <th>Path</th>
+                    <th>Status</th>
+                    <th>Size</th>
+                    <th>Referer</th>
+                    <th>User Agent</th>
+                  </tr>
+                </thead>
+                <tbody id="logsTableBody">
+                  <tr>
+                    <td colspan="10" class="loading-cell">
+                      <div class="loading-spinner"></div>
+                      <span>Loading logs...</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-wrapper">
+              <div class="pagination">
+                <button
+                  class="btn btn-pagination"
+                  id="prevBtn"
+                  onclick="changePage(-1)"
+                >
+                  <span>←</span>
+                  <span>Previous</span>
+                </button>
+                <div class="pagination-info">
+                  <span id="pageInfo">Page 1 of 1</span>
+                </div>
+                <button
+                  class="btn btn-pagination"
+                  id="nextBtn"
+                  onclick="changePage(1)"
+                >
+                  <span>Next</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script src="/static/js/dashboard.js"></script>
-</body>
+  </body>
 </html>

@@ -17,7 +17,7 @@ ENV MONGO_HOST=mongodb
 ENV MONGO_PORT=27017
 ENV MONGO_DB=logdb
 ENV MONGO_COLLECTION=logs
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
 
 # Collector service
 FROM base AS collector
