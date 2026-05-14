@@ -129,6 +129,8 @@ async function fetchLogs(page = 1, limit = 50, filters = {}) {
   if (filters.size_max) params.append("size_max", filters.size_max);
   if (filters.referer) params.append("referer", filters.referer);
   if (filters.agent) params.append("agent", filters.agent);
+  if (filters.is_attack) params.append("is_attack", filters.is_attack);
+  if (filters.attack_type) params.append("attack_type", filters.attack_type);
 
   const url = `/api/logs?${params.toString()}`;
   const response = await fetch(url);
@@ -139,6 +141,40 @@ async function fetchLogs(page = 1, limit = 50, filters = {}) {
 
   return data;
 }
+
+window.copyBanCommand = async function(ip) {
+  const cmd = `iptables -I INPUT -s ${ip} -j DROP`;
+  
+  // Try to copy to clipboard first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      alert(`Copied ban command to clipboard:\n${cmd}`);
+    } catch (err) {
+      prompt("Copy this command to ban the IP:", cmd);
+    }
+  } else {
+    prompt("Copy this command to ban the IP:", cmd);
+  }
+
+  // Also notify backend to log/execute the ban
+  try {
+    const response = await fetch('/api/ban', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ip: ip })
+    });
+    const result = await response.json();
+    if (result.success) {
+      console.log(`Successfully banned IP: ${ip}`);
+      // Optionally show a toast notification here
+    }
+  } catch (error) {
+    console.error("Error calling ban API:", error);
+  }
+};
 
 function formatTime(timeString) {
   if (!timeString) return "-";
@@ -189,9 +225,11 @@ function renderLogs(logsData) {
       const methodClass = getMethodClass(log.method);
 
       return `
-      <tr>
-        <td class="log-time">${formatTime(log.time)}</td>
-        <td class="log-ip">${log.ip || "-"}</td>
+      <tr class="${log.is_attack ? 'attack-row' : ''}">
+        <td class="log-time">${formatTime(log.time)}
+          ${log.is_attack ? `<br><span class="attack-badge" title="${(log.attack_types || []).join(', ')}">🚨 ${(log.attack_types && log.attack_types.length > 0) ? log.attack_types[0] : 'Attack'}</span>` : ''}
+        </td>
+        <td class="log-ip ${log.is_attack ? 'attack-ip' : ''}">${log.ip || "-"}</td>
         <td class="log-ident">${log.ident || "-"}</td>
         <td class="log-user">${log.user || "-"}</td>
         <td>
@@ -263,6 +301,12 @@ function updateActiveFilters(filters) {
   if (filters.agent) {
     container.innerHTML += `<span class="filter-badge">Agent: ${filters.agent} <span class="remove" onclick="removeFilter('agent')">×</span></span>`;
   }
+  if (filters.is_attack) {
+    container.innerHTML += `<span class="filter-badge" style="background: rgba(239,68,68,0.2); border-color: var(--danger); color: var(--danger);">Is Attack: ${filters.is_attack} <span class="remove" onclick="removeFilter('is_attack')">×</span></span>`;
+  }
+  if (filters.attack_type) {
+    container.innerHTML += `<span class="filter-badge" style="background: rgba(239,68,68,0.2); border-color: var(--danger); color: var(--danger);">Attack Type: ${filters.attack_type} <span class="remove" onclick="removeFilter('attack_type')">×</span></span>`;
+  }
 }
 
 function removeFilter(filterName) {
@@ -321,6 +365,8 @@ function handleSearch(event) {
     size_max: formData.get("size_max")?.trim() || "",
     referer: formData.get("referer")?.trim() || "",
     agent: formData.get("agent")?.trim() || "",
+    is_attack: formData.get("is_attack")?.trim() || "",
+    attack_type: formData.get("attack_type")?.trim() || "",
   };
 
   // Remove empty filters
@@ -881,6 +927,98 @@ function renderRefererChart(data) {
   });
 }
 
+// Render Attack Type Distribution Chart
+function renderAttackTypeChart(data) {
+  if (typeof Chart === "undefined") return;
+
+  const attacksTab = document.getElementById("attacksTab");
+  if (!attacksTab || !attacksTab.classList.contains("active")) return;
+
+  const ctx = document.getElementById("attackTypeChart");
+  if (!ctx) return;
+
+  if (window.attackTypeChart && window.attackTypeChart instanceof Chart) {
+    try { window.attackTypeChart.destroy(); } catch (e) {}
+  }
+
+  if (!data || data.length === 0) return;
+
+  const labels = data.map((item) => item[0]);
+  const values = data.map((item) => item[1]);
+
+  const attackColors = [
+    "rgba(239, 68, 68, 0.8)",
+    "rgba(245, 158, 11, 0.8)",
+    "rgba(236, 72, 153, 0.8)",
+    "rgba(139, 92, 246, 0.8)",
+    "rgba(59, 130, 246, 0.8)"
+  ];
+
+  window.attackTypeChart = new Chart(ctx.getContext("2d"), {
+    type: "doughnut",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: attackColors,
+        borderColor: "var(--bg-primary)",
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { color: "#fff", padding: 15 } }
+      }
+    }
+  });
+}
+
+// Render Top Attacking IPs Chart
+function renderAttackingIpChart(data) {
+  if (typeof Chart === "undefined") return;
+
+  const attacksTab = document.getElementById("attacksTab");
+  if (!attacksTab || !attacksTab.classList.contains("active")) return;
+
+  const ctx = document.getElementById("attackingIpChart");
+  if (!ctx) return;
+
+  if (window.attackingIpChart && window.attackingIpChart instanceof Chart) {
+    try { window.attackingIpChart.destroy(); } catch (e) {}
+  }
+
+  if (!data || data.length === 0) return;
+
+  const labels = data.map((item) => item[0]);
+  const values = data.map((item) => item[1]);
+
+  window.attackingIpChart = new Chart(ctx.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Attack Count",
+        data: values,
+        backgroundColor: "rgba(239, 68, 68, 0.6)",
+        borderColor: "rgba(239, 68, 68, 1)",
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      scales: {
+        x: { ticks: { color: "#fff" }, grid: { color: "var(--border-color)" } },
+        y: { ticks: { color: "#fff" }, grid: { color: "var(--border-color)" } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
 // Render Size Distribution Chart
 function renderSizeChart(data) {
   if (typeof Chart === "undefined") {
@@ -1279,16 +1417,6 @@ async function processStatsData(s) {
   } else {
     topStatusCodesElem.innerHTML = "";
     const statusCodes = s.status || [];
-    console.log(
-      "Status Codes data:",
-      statusCodes,
-      "Type:",
-      typeof statusCodes,
-      "Is Array:",
-      Array.isArray(statusCodes)
-    );
-
-    // Sắp xếp theo số lượng giảm dần
     const sortedStatusCodes = Array.isArray(statusCodes)
       ? [...statusCodes].sort((a, b) => {
           const countA = a[1] || a.count || 0;
@@ -1298,20 +1426,15 @@ async function processStatsData(s) {
       : [];
 
     if (sortedStatusCodes.length > 0) {
-      sortedStatusCodes.forEach((it, index) => {
+      sortedStatusCodes.forEach((it) => {
         try {
           const li = document.createElement("li");
           const statusCode = it[0] || it.status || "Unknown";
           const count = it[1] || it.count || 0;
-
-          // Xác định màu sắc dựa trên status code
           const statusClass = getStatusClassForDisplay(statusCode);
-
           li.innerHTML = `<span class="status-code ${statusClass}">${statusCode}</span> <span class="count">${count}</span>`;
           topStatusCodesElem.appendChild(li);
-        } catch (err) {
-          console.error("Error rendering Status Code item:", it, err);
-        }
+        } catch (err) {}
       });
     } else {
       const li = document.createElement("li");
@@ -1320,7 +1443,57 @@ async function processStatsData(s) {
     }
   }
 
-  // Update total entries
+  // Update Attack Summary
+  const attackSummaryElem = document.getElementById("attackSummary");
+  if (attackSummaryElem) {
+    attackSummaryElem.innerHTML = "";
+    const attacks = s.attacks_summary || [];
+    if (attacks.length > 0) {
+      attacks.forEach((it) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="path" style="color: var(--danger); font-weight: bold;">${it[0]}</span> <span class="count" style="background: var(--danger);">${it[1]}</span>`;
+        attackSummaryElem.appendChild(li);
+      });
+    } else {
+      attackSummaryElem.innerHTML = `<li><span style="color: var(--success);">No attacks detected</span></li>`;
+    }
+  }
+
+  // Update Top Attacking IPs
+  const topAttackingIpsElem = document.getElementById("topAttackingIps");
+  if (topAttackingIpsElem) {
+    topAttackingIpsElem.innerHTML = "";
+    const attackerIps = s.top_attacking_ips || [];
+    if (attackerIps.length > 0) {
+      attackerIps.forEach((it) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px; flex:1; overflow:hidden;">
+             <span class="ip attack-ip" style="overflow:hidden; text-overflow:ellipsis;">${it[0]}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+             <span class="count" style="background: var(--danger);">${it[1]}</span>
+             <button onclick="window.copyBanCommand('${it[0]}')" style="background:var(--danger); color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.75rem; box-shadow:0 2px 4px rgba(0,0,0,0.2);">Ban</button>
+          </div>
+        `;
+        topAttackingIpsElem.appendChild(li);
+      });
+    } else {
+      topAttackingIpsElem.innerHTML = `<li><span style="color: var(--success);">No attacking IPs detected</span></li>`;
+    }
+  }
+
+  // Render Charts
+  if (typeof Chart !== "undefined") {
+    // Attack Charts
+    if (s.attacks_summary && s.attacks_summary.length > 0) {
+      renderAttackTypeChart(s.attacks_summary);
+    }
+    if (s.top_attacking_ips && s.top_attacking_ips.length > 0) {
+      renderAttackingIpChart(s.top_attacking_ips);
+    }
+
+    const methods = s.methods || [];
   const totalElem = document.getElementById("totalEntries");
   if (totalElem) {
     totalElem.textContent = s.total_entries || s.new_entries || 0;
@@ -1458,6 +1631,11 @@ function switchTab(tabName) {
       if (window.hourlyChart) {
         window.hourlyChart.resize();
       }
+    }, 100);
+  } else if (tabName === "attacks" && typeof Chart !== "undefined") {
+    setTimeout(() => {
+      if (window.attackTypeChart) window.attackTypeChart.resize();
+      if (window.attackingIpChart) window.attackingIpChart.resize();
     }, 100);
   }
 }

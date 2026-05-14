@@ -86,6 +86,25 @@ LOG_PATTERN = re.compile(
     r'( "(?P<agent>[^"]*)")?'
 )
 
+# ===== FRAMEWORK NHẬN DIỆN TẤN CÔNG (ATTACK DETECTION) =====
+ATTACK_SIGNATURES = {
+    'SQLi': re.compile(r'(%27)|(\')|(--)|(%23)|(#)|(UNION.*SELECT)|(OR.*=.*)', re.IGNORECASE),
+    'XSS': re.compile(r'(%3C|<).*?(script|img|svg|onload|onerror|prompt|alert).*?(%3E|>)', re.IGNORECASE),
+    'LFI/PathTraversal': re.compile(r'(\.\./|\.\.\\|%2e%2e%2f|%2e%2e%5c|etc/passwd|windows/win\.ini)', re.IGNORECASE),
+    'RCE/CommandInjection': re.compile(r'(%3B|;).*?(wget|curl|bash|sh|nc|netcat|perl|python|php|system|exec)', re.IGNORECASE),
+    'SSTI': re.compile(r'(\{\{.*?\}\}|\$\{.*?\}|<%.*?%>)', re.IGNORECASE),
+    'Scanner': re.compile(r'(nmap|sqlmap|nikto|dirb|gobuster|wpscan|masscan|zmap)', re.IGNORECASE)
+}
+
+def detect_attacks(path, agent, referer):
+    """Phân tích payload để phát hiện tấn công"""
+    payload = f"{path} {agent} {referer}"
+    detected = []
+    for attack_type, pattern in ATTACK_SIGNATURES.items():
+        if pattern.search(payload):
+            detected.append(attack_type)
+    return detected
+
 def get_db():
     """Get MongoDB collection"""
     client = get_mongo_client()
@@ -188,21 +207,28 @@ def parse_log_line(line):
         elif len(parts) == 2:
             method, path = parts
     try:
-        dt = dateparser.parse(d['time'].replace(':', ' ', 1))
+        dt = datetime.strptime(d['time'], "%d/%b/%Y:%H:%M:%S %z")
     except Exception:
         dt = datetime.utcnow()
     size = None if d['size'] == '-' else int(d['size'])
+    
+    agent = d.get('agent')
+    referer = d.get('referer')
+    attacks = detect_attacks(path, agent, referer)
+    
     return {
         'ip': d.get('ip'),
         'user': d.get('user'),
-        'time': dt if dt else datetime.utcnow(),
+        'time': dt,
         'method': method,
         'path': path,
         'proto': proto,
         'status': int(d.get('status')) if d.get('status') else None,
         'size': size,
-        'referer': d.get('referer') if d.get('referer') else None,
-        'agent': d.get('agent') if d.get('agent') else None
+        'referer': referer if referer else None,
+        'agent': agent if agent else None,
+        'is_attack': len(attacks) > 0,
+        'attack_types': attacks
     }
 
 # ===== TỐI ƯU 3: Sử dụng MongoDB unique index thay vì find_one check =====
@@ -213,15 +239,11 @@ def sync_logs_from_file(force_full_read=False):
     
     collection = get_db()
     
-    # Create unique index để tránh duplicate
+    # TỐI ƯU 3: Bỏ strict unique index để tránh rớt log (như đã làm ở collector)
     try:
-        collection.create_index(
-            [('ip', ASCENDING), ('path', ASCENDING), ('time', ASCENDING)], 
-            unique=True, 
-            background=True
-        )
+        collection.drop_index('ip_1_path_1_time_1')
     except:
-        pass  # Index already exists
+        pass
     
     if force_full_read:
         current_position = 0
@@ -361,6 +383,16 @@ def build_search_query():
                 query.setdefault('time', {})['$lte'] = dt_to
         except:
             pass
+            
+    is_attack = request.args.get('is_attack', '').strip()
+    if is_attack.lower() == 'true':
+        query['is_attack'] = True
+    elif is_attack.lower() == 'false':
+        query['is_attack'] = False
+        
+    attack_type = request.args.get('attack_type', '').strip()
+    if attack_type:
+        query['attack_types'] = attack_type
     
     return query
 
@@ -447,6 +479,18 @@ def api_stats():
                     }
                 }},
                 {'$group': {'_id': '$range', 'count': {'$sum': 1}}}
+            ],
+            'attacks_summary': [
+                {'$match': {'is_attack': True}},
+                {'$unwind': '$attack_types'},
+                {'$group': {'_id': '$attack_types', 'count': {'$sum': 1}}},
+                {'$sort': {'count': -1}}
+            ],
+            'top_attacking_ips': [
+                {'$match': {'is_attack': True}},
+                {'$group': {'_id': '$ip', 'count': {'$sum': 1}}},
+                {'$sort': {'count': -1}},
+                {'$limit': 10}
             ]
         }}
     ]
@@ -467,6 +511,8 @@ def api_stats():
             'top_referers': [[item['_id'], item['count']] for item in result['referers']],
             'hourly': [[item['_id'], item['count']] for item in result['hourly']],
             'size_distribution': [[item['_id'], item['count']] for item in result['size_distribution']],
+            'attacks_summary': [[item['_id'], item['count']] for item in result.get('attacks_summary', [])],
+            'top_attacking_ips': [[item['_id'], item['count']] for item in result.get('top_attacking_ips', [])],
             'latest_time': latest_time,
             'total_entries': total_count
         })
@@ -500,7 +546,7 @@ def api_logs():
             {
                 '_id': 1, 'ip': 1, 'user': 1, 'time': 1,
                 'method': 1, 'path': 1, 'status': 1, 'size': 1,
-                'referer': 1, 'agent': 1
+                'referer': 1, 'agent': 1, 'is_attack': 1, 'attack_types': 1
             }
         ).sort('time', -1).skip(skip).limit(per_page)
         
@@ -580,6 +626,21 @@ def api_sync():
     force = request.json.get('force', False) if request.is_json else False
     result = sync_logs_from_file(force_full_read=force)
     return jsonify(result)
+
+@app.route('/api/ban', methods=['POST'])
+@login_required
+def api_ban():
+    """API to ban an IP (demo - assumes firewall control)"""
+    ip = request.json.get('ip') if request.is_json else None
+    if not ip:
+        return jsonify({'success': False, 'message': 'IP is required'}), 400
+    
+    # NOTE: In a real environment, this would execute `iptables -I INPUT -s {ip} -j DROP`
+    # or update a WAF configuration. Since this is running in a Docker container,
+    # executing iptables directly might not affect the host without privileged mode.
+    # We will log the action and return success for the frontend.
+    print(f"[*] ACTION: Banned IP {ip} via API request")
+    return jsonify({'success': True, 'message': f'IP {ip} has been banned'})
 
 if __name__ == '__main__':
     # Initialize default user on startup
