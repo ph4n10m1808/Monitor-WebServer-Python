@@ -9,24 +9,24 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Dashboard service
 FROM base AS dashboard
-COPY src/app.py .
-COPY src/create_user.py .
-COPY src/templates ./templates
-COPY src/static ./static
+# Copy toàn bộ code từ src vào thư mục hiện tại (/app)
+COPY src/ . 
 EXPOSE 5000
 ENV MONGO_HOST=mongodb
 ENV MONGO_PORT=27017
 ENV MONGO_DB=logdb
 ENV MONGO_COLLECTION=logs
 ENV SECRET_KEY=change-this-secret-key-in-production
+# Sử dụng gunicorn để chạy app
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
 
 # Collector service
 FROM base AS collector
-COPY src/collector.py .
+# Copy toàn bộ code từ src vào thư mục hiện tại (/app)
+COPY src/ .
 ENV MONGO_HOST=mongodb
 ENV MONGO_PORT=27017
 ENV MONGO_DB=logdb
 ENV MONGO_COLLECTION=logs
 ENV LOG_PATH=/logs/access.log
-CMD ["python", "collector.py"]
+CMD ["python", "-u", "collector.py"]

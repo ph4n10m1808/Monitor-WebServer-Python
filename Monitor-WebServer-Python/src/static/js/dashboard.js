@@ -1679,7 +1679,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       }, 1000);
     }
   });
-});
 
 // Set up polling interval for stats
 setInterval(update, updateInterval);

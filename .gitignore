@@ -3,3 +3,9 @@ logs/
 Vagrantfile
 .vagrant/*
 BTL_LTPython_Nhom22.zip
+
+# VirtualBox logs
+*.log
+
+# Web Source (ignore the PHP site source)
+/src/
