@@ -7,5 +7,6 @@ BTL_LTPython_Nhom22.zip
 # VirtualBox logs
 *.log
 
-# Web Source (ignore the PHP site source)
+# Web Source and Database (not uploaded to git)
 /src/
+/db/
